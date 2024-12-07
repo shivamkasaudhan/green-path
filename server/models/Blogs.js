@@ -1,0 +1,35 @@
+const mongoose=require('mongoose');
+const BlogSchema= new mongoose.Schema({
+    title:{
+        english:{
+            type:String,
+            required:true
+        },
+        hindi:{
+            type:String,
+            required:true
+        }
+    },
+    date:{
+        type:Date,
+        default:Date.now
+    },
+    image:{
+        type:String
+    },
+    discription:{
+        english:{
+            type:String,
+            required:true
+        },
+        hindi:{
+            type:String,
+            required:true
+        }
+    },
+    content:{
+        english:{type:String,required:true},
+        hindi:{type:String,required:true}
+    }
+});
+module.exports=mongoose.model('blog',BlogSchema);
