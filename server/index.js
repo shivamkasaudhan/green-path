@@ -4,6 +4,8 @@ const bcrypt = require('bcrypt');
 const customer = require('./models/Coustomer');
 const farmer = require('./models/Farmer');
 const blogs = require('./models/Blogs');
+const products = require('./models/product');
+const upload=require('./middleware/Multer')
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
@@ -182,7 +184,6 @@ app.post('/farmerlogin', async (req, res) => {
 });
 
 //login endpoint
-
 app.post('/login', async (req, res) => {
     const { emailorContact, password } = req.body;
 
@@ -257,7 +258,7 @@ app.get('/farmerinfo', authenticateUser, async (req, res) => {
 
         res.status(200).json({
             message: 'User info retrieved successfully',
-            user,
+            user:user
         });
     } catch (err) {
         console.error('Error fetching farmer info:', err);
@@ -297,6 +298,75 @@ app.post('/addblogs', async (req, res) => {
     }
 });
 
+//get blog 
+app.get('/blogs', async(req,res)=>{
+    try{
+        const blog= await blogs.find();
+        res.status(200).json(blog);
+    }catch(err){
+        res.status(500).json({message:'Eroor in fetching blogs'},err);
+    }
+})
+
+// get a single blog
+app.get('/blogs/:id',async(req,res)=>{
+    try{
+        const blogId=req.params.id;
+        const blog=await blogs.findById(blogId);
+        if(!blog){
+            return res.status(404).json({message:"Blog not found"});
+        }
+        res.json(blog);
+    }catch(err){
+        res.status(500).json({message:"Error in fetching this blog"},err);
+    }
+
+});
+
+//add products 
+app.post('/addproduct',authenticateUser,upload.single('image'),async(req,res)=>{
+    const {title,description,price,quantity}=req.body;
+    const farmerId=req.user.id;
+    try{
+        if(!title || !description || !price || !quantity || !req.file){
+            return res.status(400).json({message:'All fields are required'});
+        }
+        const newProduct = new products({
+            title,
+            description,
+            image: req.file.path,
+            price,
+            quantity,
+            farmerId
+        });
+        await newProduct.save();
+        res.status(201).json({
+            message:'Product added successfully',
+            product:newProduct
+        });
+
+    }catch(err){
+        res.status(500).json({message:'internal server error.'});
+    }
+});
+
+//fetch products 
+app.get('/products',authenticateUser,async(req,res)=>{
+    try{
+        const farmerId=req.user.id;
+        const productList = await products.find({farmerId});
+        if(productList.length===0){
+            return res.status(404).json({message:'No product found'});
+        }
+        res.status(200).json({
+            message:'product retrieved successfully',
+            products:productList
+        });
+    }catch(err){
+        res.status(500).json({message:"Internal server error"});
+    }
+
+});
 
 //server start 
 app.listen(port, () => {
