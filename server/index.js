@@ -5,8 +5,10 @@ const customer = require('./models/Coustomer');
 const farmer = require('./models/Farmer');
 const blogs = require('./models/Blogs');
 const products = require('./models/product');
-const upload=require('./middleware/Multer')
+const admin = require('./models/Admin');
+const upload = require('./middleware/Multer');
 const jwt = require('jsonwebtoken');
+const Admin = require('./models/Admin');
 require('dotenv').config();
 
 const app = express();
@@ -14,8 +16,6 @@ const port = 5000;
 
 const MONGO_URI = process.env.mongo_uri;
 const jwt_secret = process.env.jwt_secret_key;
-
-
 
 mongoose.connect(MONGO_URI)
     .then(() => console.log("mongo atlas is connected succesfully"))
@@ -258,7 +258,7 @@ app.get('/farmerinfo', authenticateUser, async (req, res) => {
 
         res.status(200).json({
             message: 'User info retrieved successfully',
-            user:user
+            user: user
         });
     } catch (err) {
         console.error('Error fetching farmer info:', err);
@@ -270,8 +270,8 @@ app.get('/farmerinfo', authenticateUser, async (req, res) => {
 app.post('/addblogs', async (req, res) => {
     const { title_english, title_hindi, image, discription_english, discription_hindi, content_english, content_hindi } = req.body;
     try {
-        if(!title_english || !title_hindi || !discription_english || !discription_hindi || !content_english || !content_hindi || !image){
-            return res.status(400).json({messge:'all fields are required.'});
+        if (!title_english || !title_hindi || !discription_english || !discription_hindi || !content_english || !content_hindi || !image) {
+            return res.status(400).json({ messge: 'all fields are required.' });
         }
         const title = {
             english: title_english,
@@ -285,12 +285,12 @@ app.post('/addblogs', async (req, res) => {
             english: content_english,
             hindi: content_hindi
         };
-       
+
         const newBlog = new blogs({ title, image, discription, content });
-        const savedBlog=await newBlog.save();
+        const savedBlog = await newBlog.save();
         res.status(201).json({
             message: 'Blog added successfully.',
-            blog:savedBlog
+            blog: savedBlog
         });
     } catch (err) {
         console.log("Error in adding blog");
@@ -299,37 +299,37 @@ app.post('/addblogs', async (req, res) => {
 });
 
 //get blog 
-app.get('/blogs', async(req,res)=>{
-    try{
-        const blog= await blogs.find();
+app.get('/blogs', async (req, res) => {
+    try {
+        const blog = await blogs.find();
         res.status(200).json(blog);
-    }catch(err){
-        res.status(500).json({message:'Eroor in fetching blogs'},err);
+    } catch (err) {
+        res.status(500).json({ message: 'Eroor in fetching blogs' }, err);
     }
 })
 
 // get a single blog
-app.get('/blogs/:id',async(req,res)=>{
-    try{
-        const blogId=req.params.id;
-        const blog=await blogs.findById(blogId);
-        if(!blog){
-            return res.status(404).json({message:"Blog not found"});
+app.get('/blogs/:id', async (req, res) => {
+    try {
+        const blogId = req.params.id;
+        const blog = await blogs.findById(blogId);
+        if (!blog) {
+            return res.status(404).json({ message: "Blog not found" });
         }
         res.json(blog);
-    }catch(err){
-        res.status(500).json({message:"Error in fetching this blog"},err);
+    } catch (err) {
+        res.status(500).json({ message: "Error in fetching this blog" }, err);
     }
 
 });
 
 //add products 
-app.post('/addproduct',authenticateUser,upload.single('image'),async(req,res)=>{
-    const {title,description,price,quantity}=req.body;
-    const farmerId=req.user.id;
-    try{
-        if(!title || !description || !price || !quantity || !req.file){
-            return res.status(400).json({message:'All fields are required'});
+app.post('/addproduct', authenticateUser, upload.single('image'), async (req, res) => {
+    const { title, description, price, quantity } = req.body;
+    const farmerId = req.user.id;
+    try {
+        if (!title || !description || !price || !quantity || !req.file) {
+            return res.status(400).json({ message: 'All fields are required' });
         }
         const newProduct = new products({
             title,
@@ -341,32 +341,109 @@ app.post('/addproduct',authenticateUser,upload.single('image'),async(req,res)=>{
         });
         await newProduct.save();
         res.status(201).json({
-            message:'Product added successfully',
-            product:newProduct
+            message: 'Product added successfully',
+            product: newProduct
         });
 
-    }catch(err){
-        res.status(500).json({message:'internal server error.'});
+    } catch (err) {
+        res.status(500).json({ message: 'internal server error.' });
     }
 });
 
-//fetch products 
-app.get('/products',authenticateUser,async(req,res)=>{
-    try{
-        const farmerId=req.user.id;
-        const productList = await products.find({farmerId});
-        if(productList.length===0){
-            return res.status(404).json({message:'No product found'});
+//fetch farmers products 
+app.get('/myproducts', authenticateUser, async (req, res) => {
+    try {
+        const farmerId = req.user.id;
+        const productList = await products.find({ farmerId });
+        if (productList.length === 0) {
+            return res.status(404).json({ message: 'No product found' });
         }
         res.status(200).json({
-            message:'product retrieved successfully',
-            products:productList
+            message: 'product retrieved successfully',
+            products: productList
         });
-    }catch(err){
-        res.status(500).json({message:"Internal server error"});
+    } catch (err) {
+        res.status(500).json({ message: "Internal server error" });
     }
 
 });
+
+// fetch products 
+app.get('/products', async (req, res) => {
+    try {
+        const productList = await products.find();
+        res.status(200).json({
+            message: 'Product retrieved successfully',
+            list: productList
+        });
+    } catch (err) {
+        res.status(500).json({ message: 'Internal Server error' });
+    }
+});
+
+//fetch a single product 
+app.get('/products/:id', async (req, res) => {
+    try {
+        const productId = req.params.id;
+        const product = await products.findById(productId);
+        if (!product) {
+            return res.status(404).json({ message: 'Product not found' });
+        }
+        res.json(product);
+    } catch (err) {
+        res.status(500).json({ message: 'Internal server error.' });
+    }
+
+});
+
+//admin signup 
+app.post('/admin',async (req,res)=>{
+    const {email,password}=req.body;
+    try{
+        if(!email || !password){
+            return res.status(400).json({message:'All fields are required.'});
+        }
+        const saltRound=10;
+        const hashedPassword=await bcrypt.hash(password,saltRound);
+        const newAdmin=new Admin({
+            email,password:hashedPassword
+        });
+        await newAdmin.save();
+        res.status(200).json({message:'Admin added successfully'});
+    }catch(err){
+        res.status(500).json({message:'Internal server error'});
+    }
+});
+
+//admin login
+app.post('/adminlogin',async (req,res)=>{
+    const {email,password}=req.body;
+    try{
+        if(!email || !password){
+            return res.status(400).json({message:'All field are required'});
+        }
+        const user=await admin.findOne({email});
+        if(!user){
+            return res.status(404).json({message:"Admin not found"});
+        }
+        const isMatch=await bcrypt.compare(password,user.password);
+        if(!isMatch){
+            return res.status(401).json({message:"Invalid password"});
+        }
+        res.status(200).json({
+            message:"Login Successfull",
+            admin:{
+                id:user._id,
+                email:user.email
+            }
+        });
+    }catch(err){
+        console.error("Login Failed",err);
+        res.status(500).json({message:'internal server failed'});
+    }
+});
+
+//order 
 
 //server start 
 app.listen(port, () => {
