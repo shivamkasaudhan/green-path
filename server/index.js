@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
+const cors=require('cors');
 const customer = require('./models/Coustomer');
 const farmer = require('./models/Farmer');
 const blogs = require('./models/Blogs');
@@ -22,6 +23,11 @@ mongoose.connect(MONGO_URI)
     .catch(err => console.log("Error connecting in mongo", err));
 
 // middleware to parse jason 
+app.use(cors({
+    origin:'http://localhost:3003',
+    methods:['get','post'],
+    credentials:true
+}));
 app.use(express.json());
 
 app.get('/', (req, res) => {
